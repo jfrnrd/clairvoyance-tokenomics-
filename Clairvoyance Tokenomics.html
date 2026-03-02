@@ -1,0 +1,846 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>$CLRV — Token Allocation · Clairvoyance</title>
+<link rel="preconnect" href="https://api.fontshare.com">
+<link href="https://api.fontshare.com/v2/css?f[]=neue-montreal@200,300,400,500,600,700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<style>
+/* ── TOKENS ──────────────────────────────────────── */
+:root {
+  --w:   #f9f8f5;
+  --off: #f2f0eb;
+  --line:#e4e0d8;
+  --ln2: #d0ccc4;
+  --ink: #111110;
+  --i2:  #3a3935;
+  --i3:  #7a7870;
+  --i4:  #b0ada6;
+  --sans:"Neue Montreal","Helvetica Neue",Arial,sans-serif;
+  --mono:"JetBrains Mono","Courier New",monospace;
+  --ease:cubic-bezier(0.16,1,0.3,1);
+}
+
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{background:var(--w);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.7;-webkit-font-smoothing:antialiased;overflow-x:hidden;cursor:none;}
+
+/* ── CURSOR ──────────────────────────────────────── */
+#cur{position:fixed;width:7px;height:7px;background:var(--ink);border-radius:50%;pointer-events:none;z-index:9999;transform:translate(-50%,-50%);transition:width .18s var(--ease),height .18s var(--ease),opacity .18s;mix-blend-mode:multiply;}
+#cur.big{width:34px;height:34px;}
+
+/* ── NAV ─────────────────────────────────────────── */
+nav{position:fixed;top:0;left:0;right:0;z-index:200;display:flex;align-items:center;justify-content:space-between;padding:16px 48px;background:rgba(249,248,245,.94);backdrop-filter:blur(12px);border-bottom:1px solid var(--line);}
+.nl{display:flex;align-items:center;gap:12px;}
+.nl-dot{width:20px;height:20px;border-radius:50%;background:radial-gradient(circle at 38% 38%,#fff 0%,#aee2ff 30%,#c4d0f5 60%,#deb8f0 85%,#e8c6f4 100%);box-shadow:0 0 12px rgba(174,226,255,.5);}
+.nl-t{font-family:var(--mono);font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--ink);font-weight:500;}
+.nr{display:flex;align-items:center;gap:28px;}
+.nr a{font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--i3);text-decoration:none;transition:color .2s;}
+.nr a:hover{color:var(--ink);}
+.nbadge{font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;border:1px solid var(--ln2);padding:4px 12px;color:var(--i2);}
+@media(max-width:768px){nav{padding:12px 20px;}.nr{display:none;}}
+
+/* ── SHELL ───────────────────────────────────────── */
+.shell{max-width:1040px;margin:0 auto;padding:0 48px;}
+@media(max-width:768px){.shell{padding:0 20px;}}
+
+/* ── HERO ─────────────────────────────────────────── */
+.hero{padding:148px 0 0;border-bottom:2px solid var(--ink);display:grid;grid-template-columns:1fr 1fr;gap:0;align-items:end;min-height:90vh;}
+@media(max-width:800px){.hero{grid-template-columns:1fr;min-height:auto;padding-bottom:40px;}}
+.hero-left{padding-bottom:80px;}
+.h-kicker{font-family:var(--mono);font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:var(--i3);margin-bottom:24px;display:flex;align-items:center;gap:14px;}
+.h-kicker::before{content:'';display:block;width:32px;height:1px;background:var(--i3);}
+.h-kicker-dot{width:5px;height:5px;border-radius:50%;background:var(--ink);animation:blink 2s ease-in-out infinite;}
+@keyframes blink{0%,100%{opacity:1;}50%{opacity:.2;}}
+h1{font-family:var(--sans);font-size:clamp(36px,4vw,58px);font-weight:600;line-height:1.05;letter-spacing:-.03em;margin-bottom:28px;color:var(--ink);}
+h1 em{font-style:italic;font-weight:300;}
+.h-sub{font-size:15px;color:var(--i3);max-width:420px;font-weight:300;line-height:1.65;margin-bottom:40px;}
+.tags{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:40px;}
+.tag{font-family:var(--mono);font-size:9px;letter-spacing:.12em;text-transform:uppercase;border:1px solid var(--ln2);padding:4px 11px;color:var(--i3);}
+.tag.sig{border-color:var(--ink);color:var(--ink);}
+
+/* hero stats row */
+.hero-stats{display:grid;grid-template-columns:repeat(3,1fr);border:1px solid var(--line);}
+.hs-item{padding:20px 22px;border-right:1px solid var(--line);}
+.hs-item:last-child{border-right:none;}
+.hs-val{font-family:var(--mono);font-size:22px;font-weight:400;color:var(--ink);letter-spacing:-.02em;display:block;margin-bottom:4px;}
+.hs-lbl{font-family:var(--mono);font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--i4);}
+
+/* ── SPHERE CANVAS WRAPPER ──────────────────────── */
+.hero-right{display:flex;align-items:flex-end;justify-content:center;padding-bottom:0;position:relative;}
+#sphere-canvas{display:block;cursor:none;}
+
+/* ── SECTIONS ─────────────────────────────────────── */
+section{padding:80px 0;border-bottom:1px solid var(--line);}
+section:last-of-type{border-bottom:none;}
+.sh{display:flex;align-items:baseline;gap:20px;margin-bottom:8px;}
+.sn{font-family:var(--mono);font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--i3);white-space:nowrap;padding-top:3px;}
+h2{font-family:var(--sans);font-size:clamp(22px,2.8vw,34px);font-weight:600;letter-spacing:-.02em;line-height:1.1;color:var(--ink);}
+.sd{font-family:var(--mono);font-size:11px;letter-spacing:.06em;color:var(--i4);margin-top:6px;margin-bottom:44px;max-width:560px;}
+
+/* ── ALLOCATION TABLE ────────────────────────────── */
+.alloc-wrap{border:1px solid var(--line);}
+.alloc-head{display:grid;grid-template-columns:2.2fr 0.7fr 1.1fr 1.3fr;gap:0;background:var(--off);border-bottom:1px solid var(--line);}
+.alloc-head-col{font-family:var(--mono);font-size:9px;letter-spacing:.15em;text-transform:uppercase;color:var(--i3);padding:13px 18px;}
+.alloc-group{border-bottom:1px solid var(--line);}
+.alloc-group:last-child{border-bottom:none;}
+.alloc-parent{display:grid;grid-template-columns:2.2fr 0.7fr 1.1fr 1.3fr;gap:0;align-items:center;transition:background .12s;cursor:pointer;}
+.alloc-parent:hover{background:var(--off);}
+.alloc-name-cell{padding:18px 18px;display:flex;align-items:center;gap:12px;}
+.alloc-dot{width:8px;height:8px;border-radius:2px;flex-shrink:0;}
+.alloc-name{font-size:14px;font-weight:500;color:var(--ink);}
+.alloc-pct{font-family:var(--mono);font-size:14px;font-weight:400;color:var(--ink);padding:18px 18px;}
+.alloc-tokens{font-family:var(--mono);font-size:12px;color:var(--i2);padding:18px 18px;}
+.alloc-bar-cell{padding:18px 18px;}
+.alloc-bar-track{height:3px;background:var(--line);border-radius:2px;overflow:hidden;}
+.alloc-bar-fill{height:100%;border-radius:2px;transform:scaleX(0);transform-origin:left;transition:transform 1.1s var(--ease);}
+.alloc-chevron{transition:transform .3s var(--ease);display:inline-block;margin-left:auto;padding-right:18px;font-family:var(--mono);font-size:11px;color:var(--i4);}
+.alloc-group.open .alloc-chevron{transform:rotate(90deg);}
+
+.alloc-children{display:none;background:var(--off);border-top:1px solid var(--line);}
+.alloc-group.open .alloc-children{display:block;}
+.alloc-child{display:grid;grid-template-columns:2.2fr 0.7fr 1.1fr 1.3fr;gap:0;align-items:center;border-bottom:1px solid var(--line);transition:background .1s;}
+.alloc-child:last-child{border-bottom:none;}
+.alloc-child:hover{background:var(--line);}
+.alloc-child .alloc-name-cell{padding:12px 18px 12px 36px;}
+.alloc-child .alloc-name{font-size:12px;font-weight:400;color:var(--i2);}
+.alloc-child .alloc-pct{font-family:var(--mono);font-size:12px;color:var(--i3);padding:12px 18px;}
+.alloc-child .alloc-tokens{font-family:var(--mono);font-size:11px;color:var(--i4);padding:12px 18px;}
+.alloc-child .alloc-bar-cell{padding:12px 18px;}
+
+/* ── CHART SECTION ─────────────────────────────── */
+.chart-layout{display:grid;grid-template-columns:420px 1fr;gap:64px;align-items:start;}
+@media(max-width:900px){.chart-layout{grid-template-columns:1fr;}}
+#pie-canvas{display:block;}
+.chart-legend{display:flex;flex-direction:column;gap:0;}
+.cl-item{display:flex;align-items:center;justify-content:space-between;padding:13px 0;border-bottom:1px solid var(--line);cursor:pointer;transition:opacity .15s;}
+.cl-item:first-child{border-top:1px solid var(--line);}
+.cl-item:hover{opacity:.7;}
+.cl-left{display:flex;align-items:center;gap:12px;}
+.cl-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;}
+.cl-name{font-size:13px;font-weight:400;color:var(--i2);}
+.cl-pct{font-family:var(--mono);font-size:13px;color:var(--ink);font-weight:400;}
+
+/* ── TOKEN UTILITY ─────────────────────────────── */
+.utility-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:2px;background:var(--line);border:1px solid var(--line);}
+@media(max-width:720px){.utility-grid{grid-template-columns:1fr;}}
+.util-card{background:var(--w);padding:28px 24px;transition:background .15s;}
+.util-card:hover{background:var(--off);}
+.util-icon{width:28px;height:28px;margin-bottom:18px;}
+.util-icon svg{width:28px;height:28px;stroke:var(--ink);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}
+.util-title{font-size:14px;font-weight:600;letter-spacing:-.01em;margin-bottom:8px;}
+.util-desc{font-size:12px;color:var(--i2);line-height:1.65;}
+.util-tag{font-family:var(--mono);font-size:8px;letter-spacing:.1em;text-transform:uppercase;border:1px solid var(--ln2);padding:3px 8px;color:var(--i3);display:inline-block;margin-top:12px;}
+
+/* ── VESTING / SCHEDULE ─────────────────────────── */
+.vesting-table{border:1px solid var(--line);overflow:hidden;}
+.vt-row{display:grid;grid-template-columns:2fr 1fr 1fr 1.5fr;align-items:center;border-bottom:1px solid var(--line);transition:background .1s;}
+.vt-row:last-child{border-bottom:none;}
+.vt-row:hover{background:var(--off);}
+.vt-row.head{background:var(--off);}
+.vt-cell{padding:13px 18px;font-family:var(--mono);font-size:11px;color:var(--i3);letter-spacing:.04em;}
+.vt-row.head .vt-cell{font-size:9px;letter-spacing:.15em;text-transform:uppercase;color:var(--i4);}
+.vt-row:not(.head) .vt-cell:first-child{color:var(--ink);font-weight:500;}
+
+/* ── MANIFESTO ──────────────────────────────────── */
+.manifesto{background:var(--ink);padding:56px 60px;}
+.manifesto h2{font-size:clamp(22px,3vw,34px);font-weight:600;letter-spacing:-.02em;color:var(--w);margin-bottom:24px;line-height:1.1;}
+.manifesto h2 em{font-style:italic;font-weight:300;}
+.manifesto p{font-size:14px;color:rgba(249,248,245,.6);line-height:1.8;margin-bottom:14px;max-width:640px;}
+.manifesto p:last-child{margin-bottom:0;font-family:var(--mono);font-size:11px;color:rgba(249,248,245,.2);margin-top:32px;}
+.manifesto strong{color:var(--w);}
+@media(max-width:600px){.manifesto{padding:36px 24px;}}
+
+/* ── FOOTER ──────────────────────────────────────── */
+footer{padding:36px 0;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;border-top:1px solid var(--line);}
+.fl,.fr{font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--i4);}
+
+/* ── REVEAL ──────────────────────────────────────── */
+.rv{opacity:0;transform:translateY(18px);transition:opacity .6s var(--ease),transform .6s var(--ease);}
+.rv.in{opacity:1;transform:translateY(0);}
+.rv1{transition-delay:.06s;}.rv2{transition-delay:.12s;}.rv3{transition-delay:.18s;}.rv4{transition-delay:.24s;}
+</style>
+</head>
+<body>
+
+<div id="cur"></div>
+
+<nav>
+  <div class="nl">
+    <div class="nl-dot"></div>
+    <span class="nl-t">Clairvoyance · $CLRV</span>
+  </div>
+  <div class="nr">
+    <a href="#allocation">Allocation</a>
+    <a href="#chart">Chart</a>
+    <a href="#utility">Utility</a>
+    <a href="#vesting">Vesting</a>
+    <span class="nbadge">Token Paper</span>
+  </div>
+</nav>
+
+<div class="shell">
+
+  <!-- ── HERO ── -->
+  <header class="hero">
+    <div class="hero-left">
+      <div class="h-kicker">
+        <div class="h-kicker-dot"></div>
+        Token Distribution · 2025
+      </div>
+      <h1>One <em>trillion</em> tokens.<br>Every one accounted for.</h1>
+      <p class="h-sub">$CLRV is the governance, staking, and settlement backbone of Clairvoyance — the first correlation-aware combinatorial prediction market. This document defines exactly where every token goes and why.</p>
+      <div class="tags">
+        <span class="tag sig">ERC-20</span>
+        <span class="tag sig">Governance</span>
+        <span class="tag">Staking</span>
+        <span class="tag">Oracle Network</span>
+        <span class="tag">DAO</span>
+        <span class="tag">ZK-Rollup Native</span>
+      </div>
+      <div class="hero-stats">
+        <div class="hs-item">
+          <span class="hs-val">1T</span>
+          <span class="hs-lbl">Total Supply · Fixed</span>
+        </div>
+        <div class="hs-item">
+          <span class="hs-val">9</span>
+          <span class="hs-lbl">Allocation Buckets</span>
+        </div>
+        <div class="hs-item">
+          <span class="hs-val">30%</span>
+          <span class="hs-lbl">Community Owned</span>
+        </div>
+      </div>
+    </div>
+    <div class="hero-right">
+      <canvas id="sphere-canvas" width="480" height="480"></canvas>
+    </div>
+  </header>
+
+</div><!-- /shell -->
+
+<div style="border-bottom:2px solid var(--ink);"></div>
+
+<div class="shell">
+
+  <!-- ── §01 ALLOCATION TABLE ── -->
+  <section id="allocation">
+    <div class="sh rv"><span class="sn">01</span><h2>Token Allocation</h2></div>
+    <p class="sd rv">// 1,000,000,000,000 CLRV · fixed supply · no future minting</p>
+
+    <div class="alloc-wrap rv rv1" id="alloc-table"></div>
+  </section>
+
+  <!-- ── §02 CHART ── -->
+  <section id="chart">
+    <div class="sh rv"><span class="sn">02</span><h2>Distribution at a Glance</h2></div>
+    <p class="sd rv">// proportional view of the full token architecture</p>
+    <div class="chart-layout rv rv1">
+      <canvas id="pie-canvas" width="420" height="420"></canvas>
+      <div class="chart-legend" id="chart-legend"></div>
+    </div>
+  </section>
+
+  <!-- ── §03 TOKEN UTILITY ── -->
+  <section id="utility">
+    <div class="sh rv"><span class="sn">03</span><h2>What $CLRV Does</h2></div>
+    <p class="sd rv">// every holder action that requires or rewards the token</p>
+
+    <div class="utility-grid rv rv1">
+
+      <div class="util-card">
+        <div class="util-icon"><svg viewBox="0 0 24 24"><path d="M9 21h6"/><path d="M9 18h6"/><path d="M12 2a7 7 0 0 1 7 7c0 2.38-1.19 4.47-3 5.74V17H8v-2.26C6.19 13.47 5 11.38 5 9a7 7 0 0 1 7-7z"/></svg></div>
+        <div class="util-title">Oracle Challenge Stake</div>
+        <div class="util-desc">When a market resolves incorrectly, users stake CLRV to open a formal Adversarial Challenge. Valid challengers earn fees from the slashed oracle's stake. Invalid challenges lose their stake to the expert panel.</div>
+        <span class="util-tag">Adversarial Oracle</span>
+      </div>
+
+      <div class="util-card">
+        <div class="util-icon"><svg viewBox="0 0 24 24"><circle cx="9" cy="7" r="4"/><path d="M3 21v-2a5 5 0 0 1 5-5h4a5 5 0 0 1 5 5v2"/><circle cx="17" cy="7" r="3"/><path d="M21 21v-2a4 4 0 0 0-3-3.87"/></svg></div>
+        <div class="util-title">DAO Governance</div>
+        <div class="util-desc">CLRV holders vote on protocol upgrades, fee parameters, market category additions, and treasury deployment. Staked CLRV weight is amplified by on-chain Calibration Score — accurate forecasters govern more.</div>
+        <span class="util-tag">DAO · 3%</span>
+      </div>
+
+      <div class="util-card">
+        <div class="util-icon"><svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div>
+        <div class="util-title">Liquidity Provider Rewards</div>
+        <div class="util-desc">LPs staking CLRV into complex multi-leg markets earn scaled CLRV rewards. A 10-leg market LP earns 10× the base incentive rate. This bootstraps depth where it is most needed — the novel combo markets.</div>
+        <span class="util-tag">Staking · 10%</span>
+      </div>
+
+      <div class="util-card">
+        <div class="util-icon"><svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></div>
+        <div class="util-title">Calibration Score Rewards</div>
+        <div class="util-desc">Resolvers who achieve top-quartile Calibration Scores in their domain earn CLRV fees for participating in dispute panels. Accuracy is financially incentivised from day one — skin in the game at every layer.</div>
+        <span class="util-tag">Incentives · 15%</span>
+      </div>
+
+      <div class="util-card">
+        <div class="util-icon"><svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg></div>
+        <div class="util-title">Prediction Insurance Pools</div>
+        <div class="util-desc">CLRV deposited into Insurance Pools backs coverage against oracle error and resolution ambiguity. Pool depositors earn insurance premiums as passive yield — proportional to their share of the coverage backing.</div>
+        <span class="util-tag">Treasury · 15%</span>
+      </div>
+
+      <div class="util-card">
+        <div class="util-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="7"/><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"/></svg></div>
+        <div class="util-title">Airdrop & Bootstrap Rewards</div>
+        <div class="util-desc">Early adopters, testnet participants, and Shadow Portfolio power users receive CLRV airdrops. This seeds initial DAO participation without requiring capital — reputation and engagement are the entry criteria.</div>
+        <span class="util-tag">Airdrops · 5%</span>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ── §04 VESTING SCHEDULE ── -->
+  <section id="vesting">
+    <div class="sh rv"><span class="sn">04</span><h2>Vesting &amp; Release Schedule</h2></div>
+    <p class="sd rv">// unlock timeline — no surprise supply shocks</p>
+
+    <div class="vesting-table rv rv1">
+      <div class="vt-row head">
+        <div class="vt-cell">Allocation</div>
+        <div class="vt-cell">Cliff</div>
+        <div class="vt-cell">Vesting</div>
+        <div class="vt-cell">TGE Unlock</div>
+      </div>
+      <div class="vt-row"><div class="vt-cell">Community Incentives (15%)</div><div class="vt-cell">None</div><div class="vt-cell">48 months linear</div><div class="vt-cell">5% at TGE</div></div>
+      <div class="vt-row"><div class="vt-cell">Community Staking (10%)</div><div class="vt-cell">None</div><div class="vt-cell">36 months linear</div><div class="vt-cell">0% at TGE</div></div>
+      <div class="vt-row"><div class="vt-cell">Community Airdrops (5%)</div><div class="vt-cell">None</div><div class="vt-cell">12 months linear</div><div class="vt-cell">10% at TGE</div></div>
+      <div class="vt-row"><div class="vt-cell">VC Investors (20%)</div><div class="vt-cell">12 months</div><div class="vt-cell">36 months linear</div><div class="vt-cell">0% at TGE</div></div>
+      <div class="vt-row"><div class="vt-cell">Angel Investors (5%)</div><div class="vt-cell">6 months</div><div class="vt-cell">24 months linear</div><div class="vt-cell">0% at TGE</div></div>
+      <div class="vt-row"><div class="vt-cell">Team (4%)</div><div class="vt-cell">12 months</div><div class="vt-cell">48 months linear</div><div class="vt-cell">0% at TGE</div></div>
+      <div class="vt-row"><div class="vt-cell">Founder (1%)</div><div class="vt-cell">18 months</div><div class="vt-cell">48 months linear</div><div class="vt-cell">0% at TGE</div></div>
+      <div class="vt-row"><div class="vt-cell">Treasury — Dev (10%)</div><div class="vt-cell">None</div><div class="vt-cell">60 months linear</div><div class="vt-cell">0% at TGE</div></div>
+      <div class="vt-row"><div class="vt-cell">Treasury — Buffer (5%)</div><div class="vt-cell">None</div><div class="vt-cell">Governance controlled</div><div class="vt-cell">0% at TGE</div></div>
+      <div class="vt-row"><div class="vt-cell">Partners — Brands (5%)</div><div class="vt-cell">3 months</div><div class="vt-cell">24 months linear</div><div class="vt-cell">5% at TGE</div></div>
+      <div class="vt-row"><div class="vt-cell">Partners — Agencies (5%)</div><div class="vt-cell">3 months</div><div class="vt-cell">24 months linear</div><div class="vt-cell">5% at TGE</div></div>
+      <div class="vt-row"><div class="vt-cell">Ecosystem — Protocol (10.25%)</div><div class="vt-cell">None</div><div class="vt-cell">48 months linear</div><div class="vt-cell">2% at TGE</div></div>
+      <div class="vt-row"><div class="vt-cell">DAO Governance (3%)</div><div class="vt-cell">None</div><div class="vt-cell">Governance controlled</div><div class="vt-cell">10% at TGE</div></div>
+      <div class="vt-row"><div class="vt-cell">Grants (0.75%)</div><div class="vt-cell">None</div><div class="vt-cell">Milestone-based</div><div class="vt-cell">Milestone-based</div></div>
+      <div class="vt-row"><div class="vt-cell">Bug Bounties (0.75%)</div><div class="vt-cell">None</div><div class="vt-cell">On discovery</div><div class="vt-cell">On discovery</div></div>
+      <div class="vt-row"><div class="vt-cell">Liquidity (0.01%)</div><div class="vt-cell">None</div><div class="vt-cell">Protocol managed</div><div class="vt-cell">100% at TGE</div></div>
+    </div>
+  </section>
+
+  <!-- MANIFESTO -->
+  <section style="border-bottom:none;padding-bottom:0;">
+    <div class="manifesto rv">
+      <h2>A token with a<br><em>reason to exist.</em></h2>
+      <p><strong>$CLRV is not a speculative asset issued ahead of a product.</strong> Every allocation maps to a function that the Clairvoyance protocol requires to operate: staking to make oracle challenges credible, governance to let calibrated forecasters set protocol direction, insurance pools to make resolution guarantees meaningful, and liquidity incentives to make complex markets actually tradeable.</p>
+      <p><strong>The community owns 30%.</strong> Investors hold 25% — subject to cliff and vesting schedules that align their interests with long-term protocol health, not short-term listing prices. The treasury holds 15% under DAO control to fund development the platform cannot yet anticipate.</p>
+      <p>The Clairvoyance thesis is that <strong>accurate prediction has economic value</strong> — and that the infrastructure for expressing, recording, and settling that prediction should be transparent, composable, and resistant to manipulation. $CLRV is the mechanism that makes that resistance real.</p>
+      <p>// Clairvoyance V4 · $CLRV Token Allocation Paper · 2025 · All figures are conceptual and subject to revision prior to mainnet launch</p>
+    </div>
+  </section>
+
+  <footer>
+    <span class="fl">Clairvoyance · $CLRV · 2025 · Token Allocation</span>
+    <span class="fr">1,000,000,000,000 CLRV · Fixed Supply</span>
+  </footer>
+
+</div><!-- /shell -->
+
+<script>
+/* ══════════════════════════════════════════════════
+   DATA
+══════════════════════════════════════════════════ */
+const DATA = [
+  {
+    name: "Community", pct: 30, tokens: 300_000_000_000,
+    color: "#2563eb",
+    children: [
+      { name: "Incentives", pct: 15, tokens: 150_000_000_000 },
+      { name: "Staking", pct: 10, tokens: 100_000_000_000 },
+      { name: "Airdrops", pct: 5,  tokens: 50_000_000_000  },
+    ]
+  },
+  {
+    name: "Investors", pct: 25, tokens: 250_000_000_000,
+    color: "#7c3aed",
+    children: [
+      { name: "Venture Capital", pct: 20, tokens: 200_000_000_000 },
+      { name: "Angel Investors",  pct: 5,  tokens: 50_000_000_000  },
+    ]
+  },
+  {
+    name: "Treasury & Reserves", pct: 15, tokens: 150_000_000_000,
+    color: "#059669",
+    children: [
+      { name: "Future Development", pct: 10, tokens: 100_000_000_000 },
+      { name: "Emergency Buffer",    pct: 5,  tokens: 50_000_000_000  },
+    ]
+  },
+  {
+    name: "Ecosystem", pct: 10.99, tokens: 109_900_000_000,
+    color: "#d97706",
+    children: [
+      { name: "Protocol", pct: 10.25, tokens: 102_500_000_000 },
+      { name: "Liquidity Provision", pct: 0.01, tokens: 100_000_000 },
+    ]
+  },
+  {
+    name: "Partners", pct: 10, tokens: 100_000_000_000,
+    color: "#db2777",
+    children: [
+      { name: "Strategic Brands", pct: 5, tokens: 50_000_000_000 },
+      { name: "Agencies",          pct: 5, tokens: 50_000_000_000 },
+    ]
+  },
+  {
+    name: "Team & Founder", pct: 5, tokens: 50_000_000_000,
+    color: "#0891b2",
+    children: [
+      { name: "Team",    pct: 4, tokens: 40_000_000_000 },
+      { name: "Founder", pct: 1, tokens: 10_000_000_000 },
+    ]
+  },
+  {
+    name: "DAO", pct: 3, tokens: 30_000_000_000,
+    color: "#65a30d",
+    children: [
+      { name: "Governance", pct: 3, tokens: 30_000_000_000 },
+    ]
+  },
+  {
+    name: "Bounties & Grants", pct: 1.5, tokens: 15_000_000_000,
+    color: "#dc2626",
+    children: [
+      { name: "Grants",       pct: 0.75, tokens: 7_500_000_000 },
+      { name: "Bug Bounties", pct: 0.75, tokens: 7_500_000_000 },
+    ]
+  },
+];
+
+function fmt(n) {
+  if (n >= 1e12) return (n/1e12).toFixed(3).replace(/\.?0+$/,'') + 'T';
+  if (n >= 1e9)  return (n/1e9).toFixed(1) + 'B';
+  if (n >= 1e6)  return (n/1e6).toFixed(1) + 'M';
+  return n.toLocaleString();
+}
+
+/* ══════════════════════════════════════════════════
+   THREE.JS INTERACTIVE SPHERE
+══════════════════════════════════════════════════ */
+(function() {
+  const canvas = document.getElementById('sphere-canvas');
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+  renderer.setPixelRatio(window.devicePixelRatio);
+  renderer.setSize(480, 480);
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.2;
+
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(40, 1, 0.1, 100);
+  camera.position.set(0, 0, 4.5);
+
+  // Environment — gradient sky for iridescence reference
+  const pmRemGenerator = null;
+
+  // Main sphere geometry
+  const geo = new THREE.SphereGeometry(1.35, 128, 128);
+
+  // Custom shader material for the iridescent/opalescent orb
+  const mat = new THREE.ShaderMaterial({
+    uniforms: {
+      uTime:    { value: 0 },
+      uMouse:   { value: new THREE.Vector2(0.5, 0.5) },
+      uLight:   { value: new THREE.Vector3(1.5, 2.0, 2.5) },
+    },
+    vertexShader: `
+      varying vec3 vNormal;
+      varying vec3 vPosition;
+      varying vec3 vWorldPos;
+      void main() {
+        vNormal = normalize(normalMatrix * normal);
+        vPosition = position;
+        vWorldPos = (modelMatrix * vec4(position, 1.0)).xyz;
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+      }
+    `,
+    fragmentShader: `
+      uniform float uTime;
+      uniform vec2 uMouse;
+      uniform vec3 uLight;
+      varying vec3 vNormal;
+      varying vec3 vPosition;
+      varying vec3 vWorldPos;
+
+      vec3 iridescence(float angle, float time) {
+        // Shift hue based on viewing angle and time
+        float shift = angle * 2.2 + time * 0.18;
+        vec3 c1 = vec3(0.62, 0.78, 0.95);  // soft blue
+        vec3 c2 = vec3(0.90, 0.78, 0.96);  // soft pink-lavender
+        vec3 c3 = vec3(0.70, 0.95, 0.90);  // mint-teal
+        vec3 c4 = vec3(0.98, 0.98, 1.00);  // near white
+        float t = fract(shift);
+        float seg = floor(fract(shift * 0.25) * 4.0);
+        vec3 c;
+        if (seg < 1.0) c = mix(c4, c1, t);
+        else if (seg < 2.0) c = mix(c1, c2, t);
+        else if (seg < 3.0) c = mix(c2, c3, t);
+        else c = mix(c3, c4, t);
+        return c;
+      }
+
+      void main() {
+        vec3 N = normalize(vNormal);
+        vec3 V = normalize(cameraPosition - vWorldPos);
+        vec3 L = normalize(uLight);
+
+        // Fresnel
+        float fresnel = pow(1.0 - max(dot(N, V), 0.0), 2.5);
+
+        // Iridescent color from viewing angle
+        float viewAngle = dot(N, V);
+        vec3 iriColor = iridescence(viewAngle, uTime);
+
+        // Diffuse
+        float diff = max(dot(N, L), 0.0);
+
+        // Specular (Blinn-Phong)
+        vec3 H = normalize(L + V);
+        float spec = pow(max(dot(N, H), 0.0), 180.0);
+
+        // Core sphere color — silvery blue-white
+        vec3 base = vec3(0.78, 0.84, 0.92);
+
+        // Rim glow
+        vec3 rimColor = vec3(0.76, 0.85, 0.98);
+        float rim = pow(1.0 - max(dot(N, V), 0.0), 3.5);
+
+        // Combine
+        vec3 color = base;
+        color = mix(color, iriColor, fresnel * 0.7 + 0.1);
+        color += diff * vec3(0.95, 0.97, 1.0) * 0.18;
+        color += spec * vec3(1.0, 1.0, 1.0) * 0.9;
+        color += rim * rimColor * 0.5;
+
+        // Center glow
+        float centerGlow = 1.0 - length(vPosition.xy) / 1.5;
+        centerGlow = max(centerGlow, 0.0);
+        color += pow(centerGlow, 3.0) * vec3(1.0, 1.0, 1.0) * 0.55;
+
+        // Subtle chromatic dispersion at edges
+        float edge = pow(fresnel, 1.2);
+        color.r += edge * 0.06;
+        color.b -= edge * 0.04;
+
+        gl_FragColor = vec4(color, 1.0);
+      }
+    `,
+    transparent: false,
+  });
+
+  const sphere = new THREE.Mesh(geo, mat);
+  scene.add(sphere);
+
+  // Subtle outer glow sphere
+  const glowGeo = new THREE.SphereGeometry(1.52, 64, 64);
+  const glowMat = new THREE.ShaderMaterial({
+    uniforms: { uTime: { value: 0 } },
+    vertexShader: `
+      varying vec3 vNormal;
+      varying vec3 vViewPos;
+      void main() {
+        vNormal = normalize(normalMatrix * normal);
+        vec4 mvPos = modelViewMatrix * vec4(position, 1.0);
+        vViewPos = -mvPos.xyz;
+        gl_Position = projectionMatrix * mvPos;
+      }
+    `,
+    fragmentShader: `
+      varying vec3 vNormal;
+      varying vec3 vViewPos;
+      uniform float uTime;
+      void main() {
+        vec3 N = normalize(vNormal);
+        vec3 V = normalize(vViewPos);
+        float rim = 1.0 - max(dot(N, V), 0.0);
+        rim = pow(rim, 2.2);
+        // Animated soft color
+        float t = uTime * 0.3;
+        vec3 col1 = vec3(0.68, 0.82, 1.0);
+        vec3 col2 = vec3(0.90, 0.75, 1.0);
+        vec3 glowCol = mix(col1, col2, sin(t) * 0.5 + 0.5);
+        gl_FragColor = vec4(glowCol, rim * 0.22);
+      }
+    `,
+    transparent: true,
+    side: THREE.FrontSide,
+    depthWrite: false,
+    blending: THREE.AdditiveBlending,
+  });
+  const glowSphere = new THREE.Mesh(glowGeo, glowMat);
+  scene.add(glowSphere);
+
+  // Mouse interaction
+  let mouseX = 0, mouseY = 0;
+  let targetRotX = 0, targetRotY = 0;
+  let currentRotX = 0, currentRotY = 0;
+
+  canvas.addEventListener('mousemove', e => {
+    const rect = canvas.getBoundingClientRect();
+    mouseX = ((e.clientX - rect.left) / rect.width - 0.5) * 2;
+    mouseY = ((e.clientY - rect.top) / rect.height - 0.5) * 2;
+    targetRotY = mouseX * 0.5;
+    targetRotX = -mouseY * 0.3;
+    mat.uniforms.uMouse.value.set(
+      (e.clientX - rect.left) / rect.width,
+      1 - (e.clientY - rect.top) / rect.height
+    );
+  });
+
+  let t = 0;
+  function animate() {
+    requestAnimationFrame(animate);
+    t += 0.01;
+
+    // Smooth rotation follow
+    currentRotX += (targetRotX - currentRotX) * 0.05;
+    currentRotY += (targetRotY - currentRotY) * 0.05;
+
+    sphere.rotation.x = currentRotX + Math.sin(t * 0.15) * 0.04;
+    sphere.rotation.y = currentRotY + t * 0.08;
+    glowSphere.rotation.y = t * 0.06;
+
+    mat.uniforms.uTime.value = t;
+    glowMat.uniforms.uTime.value = t;
+
+    renderer.render(scene, camera);
+  }
+  animate();
+})();
+
+/* ══════════════════════════════════════════════════
+   ALLOCATION TABLE
+══════════════════════════════════════════════════ */
+function buildAllocTable() {
+  const wrap = document.getElementById('alloc-table');
+
+  // Header
+  const head = document.createElement('div');
+  head.className = 'alloc-head';
+  head.innerHTML = `
+    <div class="alloc-head-col">Category / Subcategory</div>
+    <div class="alloc-head-col">%</div>
+    <div class="alloc-head-col">Token Amount</div>
+    <div class="alloc-head-col">Distribution</div>
+  `;
+  wrap.appendChild(head);
+
+  DATA.forEach((item, idx) => {
+    const group = document.createElement('div');
+    group.className = 'alloc-group';
+
+    const barWidth = (item.pct / 30) * 100;
+
+    // Parent row
+    const parent = document.createElement('div');
+    parent.className = 'alloc-parent';
+    parent.innerHTML = `
+      <div class="alloc-name-cell">
+        <div class="alloc-dot" style="background:${item.color}; outline: 1px solid rgba(0,0,0,0.12);"></div>
+        <span class="alloc-name">${item.name}</span>
+      </div>
+      <div class="alloc-pct">${item.pct}%</div>
+      <div class="alloc-tokens">${fmt(item.tokens)}</div>
+      <div class="alloc-bar-cell">
+        <div class="alloc-bar-track">
+          <div class="alloc-bar-fill" data-width="${barWidth}" style="background:${item.color};"></div>
+        </div>
+      </div>
+      <span class="alloc-chevron">›</span>
+    `;
+
+    // Override grid to include chevron column
+    parent.style.gridTemplateColumns = '2.2fr 0.7fr 1.1fr 1.3fr 40px';
+
+    parent.addEventListener('click', () => {
+      group.classList.toggle('open');
+    });
+
+    // Children
+    const children = document.createElement('div');
+    children.className = 'alloc-children';
+
+    item.children.forEach(child => {
+      const childRow = document.createElement('div');
+      childRow.className = 'alloc-child';
+      const childBar = (child.pct / item.pct) * 100;
+      childRow.innerHTML = `
+        <div class="alloc-name-cell" style="padding:12px 18px 12px 40px;">
+          <span class="alloc-name" style="font-size:12px;font-weight:400;color:#7a7870;">${child.name}</span>
+        </div>
+        <div class="alloc-pct" style="font-size:12px;color:#7a7870;padding:12px 18px;">${child.pct}%</div>
+        <div class="alloc-tokens" style="font-size:11px;color:#b0ada6;padding:12px 18px;">${fmt(child.tokens)}</div>
+        <div class="alloc-bar-cell" style="padding:12px 18px;">
+          <div class="alloc-bar-track" style="height:2px;">
+            <div class="alloc-bar-fill" data-width="${childBar}" style="background:${item.color};opacity:0.5;"></div>
+          </div>
+        </div>
+      `;
+      children.appendChild(childRow);
+    });
+
+    group.appendChild(parent);
+    group.appendChild(children);
+    wrap.appendChild(group);
+
+    // Open first by default
+    if (idx === 0) group.classList.add('open');
+  });
+}
+
+/* ══════════════════════════════════════════════════
+   PIE / DONUT CHART (Canvas 2D)
+══════════════════════════════════════════════════ */
+function buildChart() {
+  const canvas = document.getElementById('pie-canvas');
+  const ctx = canvas.getContext('2d');
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = 420 * dpr;
+  canvas.height = 420 * dpr;
+  canvas.style.width = '420px';
+  canvas.style.height = '420px';
+  ctx.scale(dpr, dpr);
+
+  const cx = 210, cy = 210;
+  const outerR = 175, innerR = 108;
+  const gap = 0.022;
+  let total = DATA.reduce((a,b) => a + b.pct, 0);
+  let startAngle = -Math.PI / 2;
+
+  const segments = [];
+  DATA.forEach(item => {
+    const angle = (item.pct / total) * (Math.PI * 2);
+    segments.push({ startAngle, endAngle: startAngle + angle - gap, item });
+    startAngle += angle;
+  });
+
+  let hoveredIdx = -1;
+
+  function draw(hover = -1) {
+    ctx.clearRect(0, 0, 420, 420);
+
+    segments.forEach((seg, i) => {
+      const isHover = i === hover;
+      const ro = isHover ? outerR + 8 : outerR;
+      const ri = isHover ? innerR - 4 : innerR;
+
+      ctx.beginPath();
+      ctx.moveTo(cx + ri * Math.cos(seg.startAngle), cy + ri * Math.sin(seg.startAngle));
+      ctx.arc(cx, cy, ro, seg.startAngle, seg.endAngle);
+      ctx.arc(cx, cy, ri, seg.endAngle, seg.startAngle, true);
+      ctx.closePath();
+
+      ctx.fillStyle = seg.item.color;
+      ctx.fill();
+    });
+
+    // Center text
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#111110';
+    ctx.font = `300 28px "Neue Montreal","Helvetica Neue",Arial,sans-serif`;
+    ctx.fillText('1,000B', cx, cy - 12);
+    ctx.fillStyle = '#7a7870';
+    ctx.font = `400 11px "JetBrains Mono","Courier New",monospace`;
+    ctx.letterSpacing = '1px';
+    ctx.fillText('CLRV SUPPLY', cx, cy + 16);
+  }
+
+  draw();
+
+  canvas.addEventListener('mousemove', e => {
+    const rect = canvas.getBoundingClientRect();
+    const mx = e.clientX - rect.left - cx;
+    const my = e.clientY - rect.top - cy;
+    const dist = Math.sqrt(mx*mx + my*my);
+    let angle = Math.atan2(my, mx);
+
+    if (dist >= innerR && dist <= outerR + 12) {
+      let found = -1;
+      segments.forEach((seg, i) => {
+        let a = angle;
+        if (a < -Math.PI/2) a += Math.PI*2;
+        let s = seg.startAngle < -Math.PI/2 ? seg.startAngle + Math.PI*2 : seg.startAngle;
+        let en = seg.endAngle < -Math.PI/2 ? seg.endAngle + Math.PI*2 : seg.endAngle;
+        if (a >= s && a <= en) found = i;
+      });
+      if (found !== hoveredIdx) { hoveredIdx = found; draw(hoveredIdx); }
+    } else {
+      if (hoveredIdx !== -1) { hoveredIdx = -1; draw(); }
+    }
+  });
+
+  canvas.addEventListener('mouseleave', () => { hoveredIdx = -1; draw(); });
+
+  // Legend
+  const legend = document.getElementById('chart-legend');
+  DATA.forEach((item, i) => {
+    const row = document.createElement('div');
+    row.className = 'cl-item';
+    row.innerHTML = `
+      <div class="cl-left">
+        <div class="cl-dot" style="background:${item.color};"></div>
+        <span class="cl-name">${item.name}</span>
+      </div>
+      <span class="cl-pct">${item.pct}%</span>
+    `;
+    row.addEventListener('mouseenter', () => { hoveredIdx = i; draw(i); });
+    row.addEventListener('mouseleave', () => { hoveredIdx = -1; draw(); });
+    legend.appendChild(row);
+  });
+}
+
+/* ══════════════════════════════════════════════════
+   INTERSECTION OBSERVER — bars + reveals
+══════════════════════════════════════════════════ */
+function setupObservers() {
+  // Scroll reveal
+  const revObs = new IntersectionObserver(entries => {
+    entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('in'); revObs.unobserve(e.target); }});
+  }, { threshold: 0.06 });
+  document.querySelectorAll('.rv').forEach(el => revObs.observe(el));
+
+  // Bar animations
+  const barObs = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        e.target.querySelectorAll('.alloc-bar-fill').forEach(bar => {
+          const w = parseFloat(bar.dataset.width) / 100;
+          bar.style.transform = `scaleX(${w})`;
+        });
+        barObs.unobserve(e.target);
+      }
+    });
+  }, { threshold: 0.1 });
+  const allocWrap = document.getElementById('alloc-table');
+  if (allocWrap) barObs.observe(allocWrap);
+}
+
+/* ══════════════════════════════════════════════════
+   CURSOR
+══════════════════════════════════════════════════ */
+const cur = document.getElementById('cur');
+let cx2=0, cy2=0, tx=0, ty=0;
+document.addEventListener('mousemove', e => { tx=e.clientX; ty=e.clientY; });
+(function loop(){cx2+=(tx-cx2)*.15;cy2+=(ty-cy2)*.15;cur.style.left=cx2+'px';cur.style.top=cy2+'px';requestAnimationFrame(loop);})();
+document.querySelectorAll('a,button,[role="button"],.alloc-parent,.cl-item,.util-card,.vt-row:not(.head)').forEach(el => {
+  el.addEventListener('mouseenter', () => cur.classList.add('big'));
+  el.addEventListener('mouseleave', () => cur.classList.remove('big'));
+});
+
+/* ── INIT ── */
+buildAllocTable();
+buildChart();
+setupObservers();
+</script>
+</body>
+</html>
